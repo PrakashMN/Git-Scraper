@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+  <a href="/" class="text-indigo-600 hover:underline">&larr; Back</a>
+
+  <section class="mt-6 space-y-6">
+    <div class="flex items-start gap-4 rounded-xl border bg-white p-6 shadow">
+      <img src="{{ data.avatar_url }}" alt="avatar" class="h-20 w-20 rounded-full border" />
+      <div class="flex-1">
+        <h2 class="text-xl font-semibold">
+          {{ data.name or data.username }} <span class="text-slate-500">@{{ data.username }}</span>
+        </h2>
+        {% if data.bio %}<p class="mt-1 text-slate-700">{{ data.bio }}</p>{% endif %}
+        <div class="mt-3 flex gap-2">
+          <span class="rounded-full px-2.5 py-1 text-sm border bg-slate-50">{{ data.bio_language }}</span>
+          <span class="rounded-full px-2.5 py-1 text-sm
+            {% if data.bio_sentiment is not none and data.bio_sentiment > 0.15 %} bg-green-100 text-green-800
+            {% elif data.bio_sentiment is not none and data.bio_sentiment < -0.15 %} bg-red-100 text-red-800
+            {% else %} bg-gray-100 text-gray-800 {% endif %}">
+            Sentiment {{ '%.2f'|format(data.bio_sentiment) if data.bio_sentiment is not none else 'N/A' }}
+          </span>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="rounded-lg bg-slate-50 px-3 py-2 text-center">
+          <div class="text-xs text-slate-500">Repos</div>
+          <div class="text-lg font-semibold">{{ data.public_repos }}</div>
+        </div>
+        <div class="rounded-lg bg-slate-50 px-3 py-2 text-center">
+          <div class="text-xs text-slate-500">Followers</div>
+          <div class="text-lg font-semibold">{{ data.followers }}</div>
+        </div>
+        <div class="rounded-lg bg-slate-50 px-3 py-2 text-center">
+          <div class="text-xs text-slate-500">Following</div>
+          <div class="text-lg font-semibold">{{ data.following }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border bg-white p-6 shadow">
+      <h3 class="mb-4 text-lg font-semibold">Top Repositories</h3>
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% for r in data.top_repos %}
+          <a href="{{ r.html_url }}" target="_blank" class="block rounded-lg border p-4 hover:shadow">
+            <div class="flex items-center justify-between">
+              <div class="font-medium">{{ r.name }}</div>
+              <div class="text-sm text-slate-600">★ {{ r.stars }}</div>
+            </div>
+            {% if r.description %}<p class="mt-2 text-sm text-slate-700">{{ r.description }}</p>{% endif %}
+            {% if r.language %}<div class="mt-2 text-xs text-slate-600">{{ r.language }}</div>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

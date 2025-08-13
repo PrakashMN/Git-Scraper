@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="relative min-h-screen flex items-center justify-center overflow-hidden">
+
+  <!-- Floating frosted card -->
+  <div class="relative max-w-xl w-full bg-white/40 backdrop-blur-lg rounded-2xl p-8 shadow-2xl transform transition duration-500 hover:scale-105 hover:shadow-3xl animate-fadeIn z-10">
+    <h2 class="text-2xl font-bold text-indigo-700 mb-6 text-center">Explore GitHub Profiles</h2>
+
+    <form action="/profile" method="get" class="flex flex-col sm:flex-row gap-4">
+      <input 
+        name="username" 
+        value="{{ last_username or '' }}" 
+        placeholder="Enter GitHub username"
+        class="flex-1 rounded-lg border border-gray-300 px-4 py-3 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition duration-300 placeholder-gray-400"
+      />
+      <button class="rounded-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-6 py-3 font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transform transition duration-300">
+        Search
+      </button>
+    </form>
+
+    {% if error %}
+    <div class="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm backdrop-blur-sm animate-pulse">
+      {{ error }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.8s ease-out forwards;
+  }
+</style>
+{% endblock %}

@@ -19,11 +19,7 @@ A **modern, sleek Flask web app** that lets you explore GitHub user profiles in 
 
 - **Top Repositories:**  
   - Lists repositories sorted by **stars**.  
-  - Shows **primary language** and **description**.  
-
-- **Data Export:**  
-  - Download profile data as **CSV** for offline analysis.  
-  - Optional **JSON API** endpoint for programmatic access.  
+  - Shows **primary language** and **description**.   
 
 - **Performance Optimization:**  
   - **In-memory caching with TTL** to reduce GitHub API calls.  

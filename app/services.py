@@ -1,7 +1,12 @@
 import os
+import json
+import csv
+import io
+from datetime import datetime
 import requests
 from textblob import TextBlob
 from langdetect import detect, DetectorFactory
+from .models import db, GitHubProfile, Repository, DataExport
 
 DetectorFactory.seed = 0
 
@@ -45,6 +50,9 @@ def detect_bio_language(bio: str | None):
         return "Unknown"
 
 def build_profile(username: str, token: str | None):
+    # Check if profile exists in DB
+    existing_profile = GitHubProfile.query.filter_by(username=username).first()
+    
     user, code = github_user(username, token)
     if not user:
         return None, code
@@ -53,7 +61,7 @@ def build_profile(username: str, token: str | None):
     repos_sorted = sorted(repos, key=lambda r: r.get("stargazers_count", 0), reverse=True)[:5]
 
     bio = user.get("bio")
-    profile = {
+    profile_data = {
         "username": user.get("login"),
         "name": user.get("name"),
         "bio": bio,
@@ -73,4 +81,119 @@ def build_profile(username: str, token: str | None):
             } for r in repos_sorted
         ]
     }
-    return profile, 200
+    
+    # Save/Update in database
+    save_profile_to_db(profile_data, repos_sorted)
+    
+    return profile_data, 200
+
+def save_profile_to_db(profile_data, repos):
+    profile = GitHubProfile.query.filter_by(username=profile_data['username']).first()
+    
+    if profile:
+        # Update existing
+        profile.name = profile_data['name']
+        profile.bio = profile_data['bio']
+        profile.bio_language = profile_data['bio_language']
+        profile.bio_sentiment = profile_data['bio_sentiment']
+        profile.public_repos = profile_data['public_repos']
+        profile.followers = profile_data['followers']
+        profile.following = profile_data['following']
+        profile.avatar_url = profile_data['avatar_url']
+        profile.updated_at = datetime.utcnow()
+        
+        # Clear old repos
+        Repository.query.filter_by(profile_id=profile.id).delete()
+    else:
+        # Create new
+        profile = GitHubProfile(
+            username=profile_data['username'],
+            name=profile_data['name'],
+            bio=profile_data['bio'],
+            bio_language=profile_data['bio_language'],
+            bio_sentiment=profile_data['bio_sentiment'],
+            public_repos=profile_data['public_repos'],
+            followers=profile_data['followers'],
+            following=profile_data['following'],
+            avatar_url=profile_data['avatar_url']
+        )
+        db.session.add(profile)
+        db.session.flush()  # Get the ID
+    
+    # Add repositories
+    for repo in repos:
+        repository = Repository(
+            profile_id=profile.id,
+            name=repo.get('name', ''),
+            description=repo.get('description'),
+            stars=repo.get('stargazers_count', 0),
+            language=repo.get('language'),
+            html_url=repo.get('html_url', '')
+        )
+        db.session.add(repository)
+    
+    db.session.commit()
+    return profile
+
+def export_profile_data(username: str, format: str = 'json'):
+    profile = GitHubProfile.query.filter_by(username=username).first()
+    if not profile:
+        return None, 404
+    
+    # Prepare export data
+    export_data = {
+        'profile': {
+            'username': profile.username,
+            'name': profile.name,
+            'bio': profile.bio,
+            'bio_language': profile.bio_language,
+            'bio_sentiment': profile.bio_sentiment,
+            'public_repos': profile.public_repos,
+            'followers': profile.followers,
+            'following': profile.following,
+            'avatar_url': profile.avatar_url,
+            'last_updated': profile.updated_at.isoformat()
+        },
+        'repositories': [
+            {
+                'name': repo.name,
+                'description': repo.description,
+                'stars': repo.stars,
+                'language': repo.language,
+                'html_url': repo.html_url
+            } for repo in profile.repositories
+        ],
+        'exported_at': datetime.utcnow().isoformat()
+    }
+    
+    # Create export record
+    export_record = DataExport(
+        profile_id=profile.id,
+        format=format
+    )
+    db.session.add(export_record)
+    db.session.commit()
+    
+    if format == 'json':
+        return json.dumps(export_data, indent=2), 200
+    elif format == 'csv':
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Profile header
+        writer.writerow(['Profile Data'])
+        writer.writerow(['Username', 'Name', 'Bio', 'Repos', 'Followers', 'Following'])
+        writer.writerow([profile.username, profile.name, profile.bio, 
+                        profile.public_repos, profile.followers, profile.following])
+        
+        # Repositories header
+        writer.writerow([])
+        writer.writerow(['Repositories'])
+        writer.writerow(['Name', 'Description', 'Stars', 'Language', 'URL'])
+        
+        for repo in profile.repositories:
+            writer.writerow([repo.name, repo.description, repo.stars, repo.language, repo.html_url])
+        
+        return output.getvalue(), 200
+    
+    return None, 400

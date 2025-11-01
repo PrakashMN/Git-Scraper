@@ -19,6 +19,47 @@
         overflow-x: hidden;
         margin: 0;
         font-family: system-ui, sans-serif;
+        transition: all 0.3s ease;
+      }
+      
+      /* Dark Mode Styles */
+      body.dark-mode {
+        color: #f1f5f9;
+      }
+      
+      body.dark-mode #gradient-bg {
+        background: linear-gradient(135deg, #1e293b, #334155, #475569, #64748b);
+      }
+      
+      body.dark-mode header {
+        background: rgba(15, 23, 42, 0.8);
+        border-color: #334155;
+      }
+      
+      body.dark-mode .bg-white {
+        background: rgba(30, 41, 59, 0.9) !important;
+        border-color: #475569 !important;
+      }
+      
+      body.dark-mode .text-slate-900 {
+        color: #f1f5f9 !important;
+      }
+      
+      body.dark-mode .text-slate-700 {
+        color: #cbd5e1 !important;
+      }
+      
+      body.dark-mode .text-slate-600 {
+        color: #94a3b8 !important;
+      }
+      
+      body.dark-mode .text-slate-500 {
+        color: #64748b !important;
+      }
+      
+      body.dark-mode .bg-slate-50 {
+        background: #374151 !important;
+        color: #f9fafb !important;
       }
 
       /* Gradient background behind everything */
@@ -56,9 +97,14 @@
     <header class="border-b bg-white/70 backdrop-blur-md shadow-md sticky top-0 z-50">
       <div class="mx-auto max-w-3xl px-4 py-4 flex items-center justify-between">
         <h1 class="text-2xl font-bold tracking-tight text-slate-900">GitHub Profile Scraper</h1>
-        <button class="px-4 py-2 bg-slate-900 text-white rounded-lg shadow hover:bg-slate-800 transition">
-          Toggle Dark Mode
-        </button>
+        <div class="flex gap-3">
+          <a href="/dashboard" class="px-3 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition text-sm">
+            📊 Dashboard
+          </a>
+          <button id="darkModeToggle" class="px-4 py-2 bg-slate-900 text-white rounded-lg shadow hover:bg-slate-800 transition">
+            🌙 Dark
+          </button>
+        </div>
       </div>
     </header>
 
@@ -127,6 +173,31 @@
       window.addEventListener('resize', initParticles);
       initParticles();
       animateParticles();
+    </script>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
+      const darkModeToggle = document.getElementById('darkModeToggle');
+      const body = document.body;
+      
+      // Check for saved theme or default to light
+      const currentTheme = localStorage.getItem('theme') || 'light';
+      if (currentTheme === 'dark') {
+        body.classList.add('dark-mode');
+        darkModeToggle.innerHTML = '☀️ Light';
+      }
+      
+      darkModeToggle.addEventListener('click', () => {
+        body.classList.toggle('dark-mode');
+        
+        if (body.classList.contains('dark-mode')) {
+          darkModeToggle.innerHTML = '☀️ Light';
+          localStorage.setItem('theme', 'dark');
+        } else {
+          darkModeToggle.innerHTML = '🌙 Dark';
+          localStorage.setItem('theme', 'light');
+        }
+      });
     </script>
   </body>
 </html>

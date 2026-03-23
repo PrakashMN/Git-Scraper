@@ -124,22 +124,21 @@ This project is backed by a peer-reviewed paper. Key findings from analysis of *
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        CLIENT BROWSER                           │
-│                    React + Tailwind CSS                         │
+│              Jinja2 Templates · Tailwind CSS · JS               │
+│         index.html · profile.html · dashboard.html              │
 └──────────────────────────┬──────────────────────────────────────┘
-                           │ REST API
+                           │ HTTP
 ┌──────────────────────────▼──────────────────────────────────────┐
-│                      FLASK BACKEND                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐ │
-│  │  scraper.py  │  │preprocessor  │  │     analyzer.py       │ │
-│  │ GitHub API + │  │  tokenize /  │  │ TextBlob · VADER ·    │ │
-│  │ BeautifulSoup│  │  lemmatize / │  │ SentiStrength scoring │ │
-│  └──────┬───────┘  │  langdetect  │  └───────────────────────┘ │
-│         │          └──────────────┘                             │
-└─────────┼───────────────────────────────────────────────────────┘
-          │
-┌─────────▼───────────────────────────────────────────────────────┐
-│                   MONGODB ATLAS                                  │
-│            Profile cache · Analysis results · TTL 24h           │
+│                    FLASK APP  (routes.py)                        │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    services.py                           │   │
+│  │  GitHub API scraping · BeautifulSoup · Preprocessing     │   │
+│  │  TextBlob · VADER · SentiStrength · langdetect           │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │  models.py   │  │  config.py   │  │      wsgi.py         │  │
+│  │ Data schemas │  │  Env + setup │  │  Gunicorn entrypoint │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
           │
 ┌─────────▼───────────────────────────────────────────────────────┐
@@ -154,12 +153,11 @@ This project is backed by a peer-reviewed paper. Key findings from analysis of *
 
 | Layer | Technology |
 |-------|-----------|
-| **Backend** | Python 3.10+, Flask 2.x, Gunicorn |
-| **Frontend** | React 18, Tailwind CSS, Recharts |
-| **Database** | MongoDB Atlas |
+| **Backend** | Python 3.12, Flask 2.x, Gunicorn |
+| **Frontend** | Jinja2 Templates, Tailwind CSS (CDN), Vanilla JS |
 | **NLP / ML** | TextBlob, VADER, SentiStrength, langdetect, NLTK |
 | **Data Source** | GitHub REST API v3 + BeautifulSoup |
-| **Deployment** | Render (containerized) |
+| **Deployment** | Render (via `wsgi.py`) |
 
 ---
 
@@ -168,9 +166,7 @@ This project is backed by a peer-reviewed paper. Key findings from analysis of *
 ### Prerequisites
 
 ```bash
-Python 3.10+
-Node.js 18+
-MongoDB (local or Atlas)
+Python 3.12+
 GitHub Personal Access Token
 ```
 
@@ -181,17 +177,22 @@ git clone https://github.com/PrakashMN/github-profile-scraper.git
 cd github-profile-scraper
 ```
 
-### 2. Backend Setup
+### 2. Create a Virtual Environment
 
 ```bash
-# Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate      # Windows: venv\Scripts\activate
+```
 
-# Install dependencies
+### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-# Configure environment variables
+### 4. Configure Environment Variables
+
+```bash
 cp .env.example .env
 ```
 
@@ -199,27 +200,21 @@ Edit `.env`:
 
 ```env
 GITHUB_TOKEN=your_github_personal_access_token
-MONGODB_URI=your_mongodb_connection_string
 FLASK_ENV=development
 SECRET_KEY=your_secret_key
 ```
 
+### 5. Run the App
+
 ```bash
-# Start the Flask server
+# Development
 flask run
-# or for production:
-gunicorn app:app
+
+# Production (Gunicorn)
+gunicorn wsgi:app
 ```
 
-### 3. Frontend Setup
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:5000](http://localhost:5000) in your browser.
 
 ---
 
@@ -227,66 +222,51 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ```
 github-profile-scraper/
-├── backend/
-│   ├── app.py                 # Flask application entry point
-│   ├── scraper.py             # GitHub API + HTML parsing
-│   ├── preprocessor.py        # Text cleaning & language detection
-│   ├── analyzer.py            # Sentiment scoring (TextBlob/VADER)
-│   ├── database.py            # MongoDB interface & caching
-│   ├── api.py                 # RESTful endpoint definitions
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/        # React UI components
-│   │   ├── pages/             # Home, Profile, Dashboard
-│   │   └── App.jsx
-│   ├── package.json
-│   └── tailwind.config.js
-├── research/
-│   └── paper.pdf              # Published research paper
-├── dataset/
-│   ├── profiles_210.json      # Full dataset (JSON)
-│   └── profiles_210.csv       # Full dataset (CSV)
-├── .env.example
+├── app/
+│   ├── __pycache__/           # Python bytecode cache
+│   ├── static/
+│   │   └── css/
+│   │       └── styles.css     # Global stylesheet
+│   ├── templates/
+│   │   ├── base.html          # Base layout template
+│   │   ├── index.html         # Home / search page
+│   │   ├── profile.html       # Profile results & sentiment view
+│   │   └── dashboard.html     # Aggregated stats dashboard
+│   ├── __init__.py            # Flask app factory
+│   ├── config.py              # App configuration & env vars
+│   ├── models.py              # Data models & schema definitions
+│   ├── routes.py              # URL routing & view functions
+│   └── services.py            # GitHub API, scraping & sentiment logic
+├── instance/                  # Instance-specific config (gitignored)
+├── .env                       # Local environment variables (gitignored)
+├── .env.example               # Environment variable template
+├── .gitignore
 ├── README.md
-└── render.yaml                # Render deployment config
+├── requirements.txt           # Python dependencies
+└── wsgi.py                    # WSGI entry point for Gunicorn/Render
 ```
 
 ---
 
-## 🔌 API Reference
+## 🔌 Routes Reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/profile/<username>` | Fetch & analyze a GitHub profile |
-| `GET` | `/api/dashboard` | Aggregated stats across all analyzed profiles |
-| `GET` | `/api/export?format=json` | Export all results as JSON |
-| `GET` | `/api/export?format=csv` | Export all results as CSV |
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/` | Home page — GitHub username search |
+| `GET/POST` | `/profile/<username>` | Fetch, analyze & display a profile |
+| `GET` | `/dashboard` | Aggregated stats across all analyzed profiles |
 
-### Example Response
+### Core Logic — `services.py`
 
-```json
-{
-  "username": "torvalds",
-  "profile_url": "https://github.com/torvalds",
-  "sentiment": {
-    "label": "Positive",
-    "polarity": 0.34,
-    "subjectivity": 0.41,
-    "source_scores": {
-      "bio": 0.28,
-      "descriptions": 0.41,
-      "commits": 0.22
-    }
-  },
-  "engagement": {
-    "followers": 241000,
-    "stars_total": 198400,
-    "public_repos": 8
-  },
-  "languages": ["C", "Shell", "Python"],
-  "analyzed_at": "2026-03-23T06:00:00Z"
-}
+All scraping, preprocessing, and sentiment analysis lives in `services.py`:
+
+```python
+# Key functions
+fetch_github_profile(username)   # GitHub API + BeautifulSoup
+preprocess_text(text)            # Tokenize, lemmatize, strip code/URLs
+detect_language(text)            # langdetect ISO 639-1 detection
+analyze_sentiment(text)          # TextBlob polarity + subjectivity
+aggregate_profile_sentiment(bio, descriptions, commits)  # Weighted score
 ```
 
 ---
@@ -319,22 +299,20 @@ $$P_{profile} = 0.5 \cdot P_{desc} + 0.3 \cdot P_{commit} + 0.2 \cdot P_{bio}$$
 
 ## 🌐 Deployment
 
-This project is deployed on **Render**. To deploy your own instance:
+This project is deployed on **Render** using `wsgi.py` as the entry point. To deploy your own instance:
 
 1. Fork this repository
-2. Connect to [render.com](https://render.com)
-3. Add environment variables in Render dashboard
-4. Deploy — the `render.yaml` handles the rest
+2. Connect to [render.com](https://render.com) and create a new **Web Service**
+3. Set the following:
 
-```yaml
-# render.yaml (included in repo)
-services:
-  - type: web
-    name: github-scraper-backend
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
-```
+| Setting | Value |
+|---------|-------|
+| **Runtime** | Python 3 |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `gunicorn wsgi:app` |
+
+4. Add your environment variables (`GITHUB_TOKEN`, `SECRET_KEY`, `FLASK_ENV=production`) in the Render dashboard
+5. Deploy — your app will be live at `https://your-app.onrender.com`
 
 ---
 
